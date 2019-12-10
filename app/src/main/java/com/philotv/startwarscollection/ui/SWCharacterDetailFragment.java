@@ -1,35 +1,40 @@
 package com.philotv.startwarscollection.ui;
 
-import android.app.Activity;
 import android.os.Bundle;
 
-import com.google.android.material.appbar.CollapsingToolbarLayout;
-
-import androidx.fragment.app.Fragment;
-
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.fragment.app.Fragment;
+
+import com.bluehomestudio.progressimage.ProgressPicture;
+import com.philotv.startwarscollection.BuildConfig;
 import com.philotv.startwarscollection.R;
-import com.philotv.startwarscollection.adapter.SWCharacterClientBaseFragment;
-import com.philotv.startwarscollection.data.SWCharacterDataHelper;
 import com.philotv.startwarscollection.data.SWCharacterDetail;
+import com.philotv.startwarscollection.ui.SWMainContract.ViewSWCharacterDetails;
 
 /**
  * Fragment to show  single SWCharacter detail.
- * The fragment is contained in {@link SWCharacterMainActivity}
+ * The fragment is contained in {@link SWMainActivity}
  * on large screen (Tablets) or a {@link SWCharacterDetailActivity} on handsets.
  */
-public class SWCharacterDetailFragment extends SWCharacterClientBaseFragment implements SWCharacterMainContract.ViewSWCharacterDetails {
-    /**
-     * The fragment argument representing the item ID that this fragment
-     * represents.
-     */
-    public static final String ARG_ITEM_ID = "item_id";
+public class SWCharacterDetailFragment<T> extends Fragment implements SWMainContract.ViewSWCharacterDetails {
 
-    private SWCharacterDetail mItem;
+    public static final String HOME_PLANET_URL = "HOME_WORLD_URL";
+    private String TAG = SWCharacterDetailFragment.class.getSimpleName();
+
+    /**
+     * The fragment argument is  a Parcalable Java  object, to show selected character full details.
+     */
+    SWCharacterDetail characterDetail;
+    public static final String SW_CHARACTER_DETAIL= "SW_CHARACTER_DETAIL";  // to get selected character Detailed infomation.
+
+    View rootView;
+    SWMainContract.Presenter presenter;
+    private ProgressPicture loadingAnimation;
 
     public SWCharacterDetailFragment() {
     }
@@ -38,40 +43,62 @@ public class SWCharacterDetailFragment extends SWCharacterClientBaseFragment imp
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (getArguments().containsKey(ARG_ITEM_ID)) {
-            // Load the user selected SWCharacter details, from the list.
-            // arguments. In a real-world scenario, use a Loader
-            // to load content from a content provider.
-            // How to pass item
-//            mItem = SWCharacterDataHelper.ITEM_MAP.get(getArguments().getString(ARG_ITEM_ID));
+        if(!(savedInstanceState.isEmpty())){
+           characterDetail =   savedInstanceState.getParcelable(SW_CHARACTER_DETAIL);
+        }else if (getArguments().containsKey(SW_CHARACTER_DETAIL) ) {
+            characterDetail = (getArguments().getParcelable(SW_CHARACTER_DETAIL));
+        }
 
-            Activity activity = this.getActivity();
-            CollapsingToolbarLayout appBarLayout = (CollapsingToolbarLayout) activity.findViewById(R.id.toolbar_layout);
-            if (appBarLayout != null) {
-                appBarLayout.setTitle(mItem.getSWCharacterName());
-            }
+        if (characterDetail != null) {
+            setupToolbar("Details");
+            showSWCharacterDetail(characterDetail);
         }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.item_detail, container, false);
+        rootView = inflater.inflate(R.layout.character_detail_fragment, container, false);
 
-        if (mItem != null) {
-            ((TextView) rootView.findViewById(R.id.item_detail)).setText(mItem.getSWCharacterDetail());
-        }
-
+        loadingAnimation = rootView.findViewById(R.id.loading_view);
+        loadingAnimation.startAnimation();
         return rootView;
     }
 
     @Override
-    public void showSWCharacterDetail() {
-
+    public void showSWCharacterDetail(SWCharacterDetail characterDetail) {
+        loadingAnimation.stopAnimation();
+        ((TextView) rootView.findViewById(R.id.id_text)).setText(characterDetail.getSWCharacterName());
     }
 
     @Override
-    public void setPresenter(SWCharacterMainContract.Presenter presenter) {
+    public void setPresenter(SWMainContract.Presenter presenter) {
+        this.presenter = presenter;
+    }
 
+    @Override
+    public SWMainContract.Presenter getPresenter() {
+        return presenter;
+    }
+
+    @Override
+    public void setupToolbar(String name) {
+
+    }
+
+
+    private int extractPlanetId(String homeWorldurl) {
+
+        // SWAPI API : PLANETS API FORMAT :-
+        // ENDPOINT : /planets/:id/ -- get a specific planets resource
+        CharSequence planetAPIEndpoint = new String(BuildConfig.APP_BASE_URL_SWAPI + "planets/");
+        homeWorldurl.trim();
+
+        StringBuilder planetId = new StringBuilder(homeWorldurl.replace(planetAPIEndpoint, ""));
+        planetId.deleteCharAt(planetId.length() - 1);
+
+        Log.d(TAG, "SW Character planet id" + planetId);
+
+        return Integer.parseInt(planetId.toString());
     }
 }
